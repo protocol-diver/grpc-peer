@@ -3,12 +3,10 @@ package peer
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/protocol-diver/grpc-peer/match"
 	"github.com/protocol-diver/grpc-peer/msg"
 )
 
@@ -23,14 +21,7 @@ func (m *Server) MessageSend(ctx context.Context, req *msg.MessageSendRequest) (
 		Message:  req.Message,
 	}
 
-	sender := match.Get(req.Sender)
-	receiver := match.Get(req.Receiver)
-	if receiver == nil {
-		res.Error = "receiver not exists"
-		return res, errors.New(res.Error)
-	}
-
-	f, err := os.OpenFile(fmt.Sprintf("./data/%d.csv", sender.Id), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
+	f, err := os.OpenFile(fmt.Sprintf("./data/%d.csv", req.Sender), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
 	if err != nil {
 		res.Error = err.Error()
 		return res, err
@@ -38,10 +29,10 @@ func (m *Server) MessageSend(ctx context.Context, req *msg.MessageSendRequest) (
 	defer f.Close()
 
 	x := fmt.Sprintf(
-		"timstamp: %d, sender: %s, receiver: %s, message: %s\n",
+		"timstamp: %d, sender: %d, receiver: %d, message: %s\n",
 		time.Now().Unix(),
-		sender.String(),
-		receiver.String(),
+		req.Sender,
+		req.Receiver,
 		req.Message,
 	)
 	f.WriteString(x)

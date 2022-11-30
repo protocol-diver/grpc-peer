@@ -11,20 +11,28 @@ import (
 )
 
 type Peer struct {
-	Id     int32
-	Port   int
-	Client msg.MessageClient
-	Server msg.MessageServer
+	Id      int32
+	Port    int
+	Clients map[int]msg.MessageClient
+	Server  msg.MessageServer
+	Dial    Dial
 }
 
 func (p *Peer) String() string {
 	return fmt.Sprintf("[ID: %03d, PORT: %05d]", p.Id, p.Port)
 }
 
-func (p *Peer) Send(receiverId int32, message string, a ...any) (*msg.MessageSendResponse, error) {
-	return p.Client.MessageSend(context.Background(), &msg.MessageSendRequest{
-		Sender:   p.Id,
-		Receiver: receiverId,
+func (p *Peer) Send(senderPort, receiverPort int, message string, a ...any) (*msg.MessageSendResponse, error) {
+	if _, ok := p.Clients[receiverPort]; !ok {
+		client, err := p.Dial.NewClient(p.Port)
+		if err != nil {
+			return nil, err
+		}
+		p.Clients[receiverPort] = client
+	}
+	return p.Clients[receiverPort].MessageSend(context.Background(), &msg.MessageSendRequest{
+		Sender:   int32(senderPort),
+		Receiver: int32(receiverPort),
 		Message:  fmt.Sprintf(message, a...),
 	})
 }

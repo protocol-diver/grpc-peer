@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/protocol-diver/grpc-peer/logger"
-	"github.com/protocol-diver/grpc-peer/model"
 	"github.com/protocol-diver/grpc-peer/peer"
 )
 
@@ -25,32 +24,36 @@ func pre() {
 	}
 }
 
-func run(from, to *model.Peer, ms int) {
-	i := int64(0)
-	for {
-		time.Sleep(time.Millisecond * time.Duration(ms))
-		res, err := from.Send(to.Id, "p%d-%d-%03d", from.Id, to.Id, i)
-		if err != nil {
-			logger.Log(from.Id, err.Error())
-		} else {
-			logger.Log(from.Id, res.String())
-		}
-		i++
-	}
-}
-
 func main() {
 	pre()
 
-	p0 := peer.NewPeer(3100)
-	p1 := peer.NewPeer(3101)
-	p2 := peer.NewPeer(3102)
-	p3 := peer.NewPeer(3103)
+	ports := []int{3100, 3101, 3102, 3103, 3104, 3105, 3106, 3107}
 
-	go run(p0, p1, 1800)
-	go run(p1, p2, 2000)
-	go run(p2, p3, 1500)
-	go run(p3, p0, 3000)
+	for _, port := range ports {
+		go func(port int) {
+			p := peer.NewPeer(port)
+			time.Sleep(time.Second * 3) // wait 3s to start every peer listening
+
+			for i := int64(0); ; i++ {
+				// select target port
+				targetPort := port
+				for ; targetPort == port; targetPort = ports[rand.Intn(len(ports))] {
+				}
+
+				res, err := p.Send(port, targetPort, "p%d-%d-%03d", p.Port, targetPort, i)
+				if err != nil {
+					logger.Log(p.Id, err.Error())
+				} else {
+					logger.Log(p.Id, res.String())
+				}
+				i++
+
+				// sleep 1.5s ~ 3s
+				ms := rand.Intn(1500) + 1500
+				time.Sleep(time.Millisecond * time.Duration(ms))
+			}
+		}(port)
+	}
 
 	time.Sleep(time.Second * 30)
 }

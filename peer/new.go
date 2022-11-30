@@ -4,14 +4,22 @@ import (
 	"math/rand"
 
 	"github.com/protocol-diver/grpc-peer/logger"
-	"github.com/protocol-diver/grpc-peer/match"
 	"github.com/protocol-diver/grpc-peer/model"
+	"github.com/protocol-diver/grpc-peer/msg"
 )
+
+type Dial struct{}
+
+func (d *Dial) NewClient(port int) (msg.MessageClient, error) {
+	return NewClient(port)
+}
 
 func NewPeer(port int) *model.Peer {
 	peer := &model.Peer{
-		Port:   port,
-		Server: &Server{},
+		Port:    port,
+		Dial:    &Dial{},
+		Server:  &Server{},
+		Clients: make(map[int]msg.MessageClient),
 	}
 	for {
 		colorIdx := rand.Intn(len(colors))
@@ -24,13 +32,7 @@ func NewPeer(port int) *model.Peer {
 	}
 
 	go peer.Listen()
-	client, err := NewClient(port)
-	if err != nil {
-		return nil
-	}
-	peer.Client = client
 	logger.Log(peer.Id, "Peer created: %s", peer.String())
 
-	match.Set(peer)
 	return peer
 }
