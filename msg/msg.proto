@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package msg;
+
+option go_package = "github.com/protocol-diver/grpc-peer/msg";
+
+service Message {
+    rpc MessageSend(MessageSendRequest) returns (MessageSendResponse);
+}
+
+message MessageSendRequest {
+    int32 sender = 1;
+    int32 receiver = 2;
+    string message = 3;
+}
+
+message MessageSendResponse {
+    int32 sender = 1;
+    int32 receiver = 2;
+    string message = 3;
+    int32 id = 4;
+    string error = 5;
+}
