@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/protocol-diver/grpc-peer/logger"
 	"github.com/protocol-diver/grpc-peer/msg"
 	"google.golang.org/grpc"
@@ -37,13 +38,18 @@ func (p *Peer) Send(senderPort, receiverPort int, message string, a ...any) (*ms
 	})
 }
 
+func (p *Peer) logger(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	// fmt.Println(info.FullMethod, info.Server)
+	return handler(ctx, req)
+}
+
 func (p *Peer) Listen() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", p.Port))
 	if err != nil {
 		return err
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(p.logger)))
 	msg.RegisterMessageServer(grpcServer, p.Server)
 
 	logger.Log(p.Id, "listening at %d", p.Port)
